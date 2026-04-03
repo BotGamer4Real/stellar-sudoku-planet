@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { AuthScene } from './scenes/AuthScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
+import { GamePlayScene } from './scenes/GamePlayScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -19,8 +20,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 1280,
     height: 720
   },
-  // All scenes registered so dynamic scene.start() works reliably
-  scene: [BootScene, AuthScene, MainMenuScene]
+  scene: [BootScene, AuthScene, MainMenuScene, GamePlayScene]
 };
 
 new Phaser.Game(config);

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TopBar } from '../components/TopBar';
+import { SinglePlayerModal } from '../modals/SinglePlayerModal';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -7,8 +8,8 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Add persistent TopBar (Settings button at top-right)
-    new TopBar(this);   // no stored reference needed
+    // Persistent TopBar (Profile + Coins + Settings)
+    new TopBar(this);
 
     this.add.text(640, 200, 'MAIN MENU', {
       fontSize: '48px',
@@ -46,10 +47,15 @@ export class MainMenuScene extends Phaser.Scene {
       padding: { x: 40, y: 15 }
     }).setOrigin(0.5).setInteractive();
 
-    singlePlayerBtn.on('pointerdown', () => console.log('%c🎮 Single Player selected', 'color: lime'));
-    campaignBtn.on('pointerdown', () => console.log('%c🏆 Campaign selected', 'color: lime'));
-    dailyBtn.on('pointerdown', () => console.log('%c📅 Daily Challenge selected', 'color: lime'));
+    singlePlayerBtn.on('pointerdown', () => {
+      console.log('%c🚀 Opening Single Player difficulty modal', 'color: cyan');
+      const modal = new SinglePlayerModal(this);
+      modal.show();
+    });
 
-    console.log('%c🏠 MainMenuScene loaded with reusable TopBar', 'color: cyan; font-size: 14px');
+    campaignBtn.on('pointerdown', () => console.log('%c🏆 Campaign selected (coming soon)', 'color: lime'));
+    dailyBtn.on('pointerdown', () => console.log('%c📅 Daily Challenge selected (coming soon)', 'color: lime'));
+
+    console.log('%c🏠 MainMenuScene loaded with Single Player modal', 'color: cyan; font-size: 14px');
   }
 }
