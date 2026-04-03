@@ -15,13 +15,61 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-export const signUpWithEmail = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: window.location.origin }
+export const getCurrentUser = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+};
+
+export const getProfile = async () => {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+  if (error) console.error('Profile fetch error:', error);
+  return data;
+};
+
+export const updateProfile = async (updates: any) => {
+  const user = await getCurrentUser();
+  if (!user) return { error: new Error('No user') };
+  const { error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', user.id);
+  return { error };
+};
+
+// Realtime subscription helper
+export const subscribeToProfile = (callback: (profile: any) => void) => {
+  getCurrentUser().then(u => {
+    if (!u) return;
+    return supabase
+      .channel('profile-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${u.id}`
+      }, (payload) => callback(payload.new))
+      .subscribe();
   });
-  return { data, error };
+  return () => supabase.removeAllChannels(); // cleanup function
+};
+
+// Auth helpers
+export const signUpWithEmailAndUsername = async (email: string, password: string, username: string) => {
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email, password, options: { emailRedirectTo: window.location.origin }
+  });
+  if (authError) return { error: authError };
+
+  if (authData.user) {
+    await supabase.from('profiles').update({ username }).eq('id', authData.user.id);
+  }
+  return { data: authData, error: authError };
 };
 
 export const signInWithEmail = async (email: string, password: string) => {
@@ -30,15 +78,8 @@ export const signInWithEmail = async (email: string, password: string) => {
 };
 
 export const resetPassword = async (email: string) => {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin
-  });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
   return error;
-};
-
-export const getCurrentUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
 };
 
 export const signOut = async () => {

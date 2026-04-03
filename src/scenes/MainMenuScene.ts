@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TopBar } from '../components/TopBar';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -6,6 +7,9 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Add persistent TopBar (Settings button at top-right)
+    new TopBar(this);   // no stored reference needed
+
     this.add.text(640, 200, 'MAIN MENU', {
       fontSize: '48px',
       color: '#00ffff',
@@ -42,19 +46,10 @@ export class MainMenuScene extends Phaser.Scene {
       padding: { x: 40, y: 15 }
     }).setOrigin(0.5).setInteractive();
 
-    singlePlayerBtn.on('pointerdown', () => {
-      console.log('%c🎮 Single Player selected (core gameplay coming next)', 'color: lime');
-      // Future: this.scene.start('GamePlayScene');
-    });
+    singlePlayerBtn.on('pointerdown', () => console.log('%c🎮 Single Player selected', 'color: lime'));
+    campaignBtn.on('pointerdown', () => console.log('%c🏆 Campaign selected', 'color: lime'));
+    dailyBtn.on('pointerdown', () => console.log('%c📅 Daily Challenge selected', 'color: lime'));
 
-    campaignBtn.on('pointerdown', () => {
-      console.log('%c🏆 Campaign selected', 'color: lime');
-    });
-
-    dailyBtn.on('pointerdown', () => {
-      console.log('%c📅 Daily Challenge selected', 'color: lime');
-    });
-
-    console.log('%c🏠 MainMenuScene loaded (post-auth)', 'color: cyan; font-size: 14px');
+    console.log('%c🏠 MainMenuScene loaded with reusable TopBar', 'color: cyan; font-size: 14px');
   }
 }
