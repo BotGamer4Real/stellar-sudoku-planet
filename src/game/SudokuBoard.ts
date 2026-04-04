@@ -100,6 +100,45 @@ export class SudokuBoard {
     return true;
   }
 
+  private isComplete(): boolean {
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (this.cells[row][col].value === 0) return false;
+      }
+    }
+    return true;
+  }
+
+  private solveBoard(): boolean {
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (this.cells[row][col].value === 0) {
+          for (let num = 1; num <= 9; num++) {
+            if (this.isValidMove(row, col, num)) {
+              this.cells[row][col].value = num;
+              this.cellTexts[row][col].setText(num.toString());
+              this.cellTexts[row][col].setColor('#ffffff');
+              if (this.solveBoard()) return true;
+              this.cells[row][col].value = 0;
+              this.cellTexts[row][col].setText('');
+            }
+          }
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  public autoComplete(): void {
+    this.solveBoard();
+    this.updatePlacedCount();
+    if (this.isComplete()) {
+      console.log('%c🚀 Auto-complete triggered (dev only)', 'color: lime; font-weight: bold');
+      this.scene.events.emit('puzzleComplete');
+    }
+  }
+
   private selectCell(row: number, col: number): void {
     if (this.selectedNumber > 0) {
       this.placeNumber(row, col, this.selectedNumber);
@@ -131,6 +170,11 @@ export class SudokuBoard {
 
     if (this.placedCount[num] === 9) {
       console.log(`%c✅ Number ${num} completed — auto-disappear`, 'color: lime');
+    }
+
+    if (this.isComplete()) {
+      console.log('%c🏆 PUZZLE COMPLETE!', 'color: lime; font-weight: bold');
+      this.scene.events.emit('puzzleComplete');
     }
 
     console.log(`%c📍 Placed ${num} at (${row},${col})`, 'color: lime');

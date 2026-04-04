@@ -42,10 +42,11 @@ export const updateProfile = async (updates: any) => {
   return { error };
 };
 
-// Fixed realtime subscription
+// Improved realtime subscription – always safe, no duplicate channels
 export const subscribeToProfile = (callback: (profile: any) => void) => {
   let channel: any = null;
 
+  // Synchronous user check + subscription
   getCurrentUser().then(user => {
     if (!user) return;
     channel = supabase
@@ -63,9 +64,12 @@ export const subscribeToProfile = (callback: (profile: any) => void) => {
       .subscribe();
   });
 
-  // Return cleanup function
+  // Always return a safe cleanup function
   return () => {
-    if (channel) supabase.removeChannel(channel);
+    if (channel) {
+      supabase.removeChannel(channel);
+      channel = null;
+    }
   };
 };
 

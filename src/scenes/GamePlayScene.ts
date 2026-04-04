@@ -2,10 +2,15 @@ import Phaser from 'phaser';
 import { SudokuBoard } from '../game/SudokuBoard';
 import { TopBar } from '../components/TopBar';
 import { BackButton } from '../components/BackButton';
+import { CompletionModal } from '../modals/CompletionModal';
+import { getProfile } from '../services/supabaseClient';
 
 export class GamePlayScene extends Phaser.Scene {
   private board!: SudokuBoard;
   private ghostText: Phaser.GameObjects.Text | null = null;
+  private startTime: number = 0;
+  private timerText!: Phaser.GameObjects.Text;
+  private completionModal!: CompletionModal;
 
   constructor() {
     super('GamePlayScene');
@@ -13,8 +18,6 @@ export class GamePlayScene extends Phaser.Scene {
 
   create(data?: any): void {
     new TopBar(this);
-
-    // BackButton perfectly aligned with number pad (same y) and Profile (same x)
     new BackButton(this);
 
     this.board = new SudokuBoard(this, data?.puzzle);
@@ -23,7 +26,7 @@ export class GamePlayScene extends Phaser.Scene {
     const startX = 640 - (9 * cellSize / 2) + 25;
     const startY = 130;
 
-    // Number pad (aligned with grid)
+    // Number pad
     for (let i = 1; i <= 9; i++) {
       const btn = this.add.text(
         startX + (i - 1) * cellSize, 
@@ -67,12 +70,68 @@ export class GamePlayScene extends Phaser.Scene {
       });
     }
 
-    this.add.text(640, 710, 'Drag numbers onto the grid or click to place', {
-      fontSize: '18px',
-      color: '#aaaaaa',
+    // Timer
+    this.startTime = Date.now();
+    this.timerText = this.add.text(640, 80, '0:00', {
+      fontSize: '32px',
+      color: '#ffff00',
       fontFamily: 'Arial'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(200);
 
-    console.log('%c🎮 GamePlayScene ready with perfectly aligned BackButton', 'color: cyan; font-size: 14px');
+    // Undo button (left of grid)
+    const undoBtn = this.add.text(280, 380, '↩️', {
+      fontSize: '42px',
+      color: '#00ffff',
+      fontFamily: 'Arial',
+      backgroundColor: '#222244',
+      padding: { x: 12, y: 8 }
+    }).setOrigin(0.5).setDepth(200).setInteractive();
+
+    undoBtn.on('pointerdown', () => {
+      this.board.undoLastMove();
+    });
+
+    // Dev-only Auto-Complete button (only for BotGamer4Real)
+    this.checkForDevAutoCompleteButton();
+
+    // Completion listener
+    this.events.on('puzzleComplete', () => this.showCompletionModal());
+
+    console.log('%c🎮 GamePlayScene ready with dev auto-complete button', 'color: cyan; font-size: 14px');
+  }
+
+  private async checkForDevAutoCompleteButton(): Promise<void> {
+    const profile = await getProfile();
+    if (profile?.username === 'BotGamer4Real') {
+      const autoBtn = this.add.text(160, 570, 'AUTO', {
+        fontSize: '28px',
+        color: '#ffff00',
+        fontFamily: 'Arial',
+        backgroundColor: '#222244',
+        padding: { x: 20, y: 10 }
+      }).setOrigin(0.5).setDepth(200).setInteractive();
+
+      autoBtn.on('pointerdown', () => {
+        console.log('%c🚀 Dev auto-complete activated', 'color: yellow; font-weight: bold');
+        this.board.autoComplete();
+      });
+
+      console.log('%c🔧 Dev Auto-Complete button added (BotGamer4Real)', 'color: yellow');
+    }
+  }
+
+  update(): void {
+    const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    this.timerText.setText(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+  }
+
+  private showCompletionModal(): void {
+    const elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+    const coinsEarned = 50;
+
+    this.completionModal = new CompletionModal(this);
+    this.completionModal.show(elapsedSeconds, coinsEarned, 'single', 'Asteroid Belt');
   }
 }

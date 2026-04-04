@@ -57,10 +57,17 @@ export class TopBar {
       const modal = new SettingsModal(this.scene);
       modal.show();
     });
+
+    // GUARANTEED cleanup when scene shuts down (fixes the error)
+    this.scene.events.once('shutdown', () => this.destroy());
   }
 
   destroy(): void {
-    if (this.unsubscribe) this.unsubscribe();
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = () => {};
+    }
     if (this.container) this.container.destroy();
+    console.log('%c✅ TopBar realtime subscription cleaned up', 'color: lime');
   }
 }
