@@ -55,13 +55,14 @@ export class SinglePlayerModal {
     console.log(`%c🎯 Single Player selected: ${difficultyName}`, 'color: lime');
     
     const generator = new SudokuGenerator();
-    const puzzle = generator.generate(difficultyName);
+    const { puzzle, hash } = generator.generate(difficultyName);
 
     this.hide();
     this.scene.scene.start('GamePlayScene', { 
       mode: 'single', 
       difficulty: difficultyName,
-      puzzle: puzzle 
+      puzzle: puzzle,
+      hash: hash
     });
   }
 

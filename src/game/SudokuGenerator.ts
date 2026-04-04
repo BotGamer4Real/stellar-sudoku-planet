@@ -20,11 +20,9 @@ export class SudokuGenerator {
   }
 
   private isValid(row: number, col: number, num: number): boolean {
-    // Row & column
     for (let i = 0; i < 9; i++) {
       if (this.board[row][i] === num || this.board[i][col] === num) return false;
     }
-    // Box
     const boxRow = Math.floor(row / 3) * 3;
     const boxCol = Math.floor(col / 3) * 3;
     for (let i = 0; i < 3; i++) {
@@ -35,31 +33,22 @@ export class SudokuGenerator {
     return true;
   }
 
-  public generate(difficulty: string): number[][] {
-    // Reset board
+  public generate(difficulty: string): { puzzle: number[][], hash: string } {
     this.board = Array.from({ length: 9 }, () => Array(9).fill(0));
-
-    // Fill with a random valid solution
     this.solve();
 
-    // Clone the solved board
     let puzzle = this.board.map(row => row.slice());
 
-    // New clue ranges from Requirements Document v2.1
     let minClues = 44;
     let maxClues = 48;
-
     if (difficulty === 'Nebula Drift') { minClues = 38; maxClues = 43; }
     else if (difficulty === 'Star Cluster') { minClues = 34; maxClues = 37; }
     else if (difficulty === 'Galaxy Edge') { minClues = 29; maxClues = 33; }
     else if (difficulty === 'Supernova') { minClues = 24; maxClues = 28; }
     else if (difficulty === 'Black Hole') { minClues = 20; maxClues = 23; }
 
-    // Random number of clues within the range
     const clues = Math.floor(Math.random() * (maxClues - minClues + 1)) + minClues;
     let cellsToRemove = 81 - clues;
-
-    // Remove clues while keeping the puzzle valid
     while (cellsToRemove > 0) {
       const row = Math.floor(Math.random() * 9);
       const col = Math.floor(Math.random() * 9);
@@ -69,7 +58,10 @@ export class SudokuGenerator {
       }
     }
 
-    console.log(`%c🎲 Generated ${difficulty} puzzle with ${clues} clues`, 'color: lime');
-    return puzzle;
+    // Deterministic hash for uniqueness
+    const hash = btoa(JSON.stringify(puzzle));
+    console.log(`%c🎲 Generated ${difficulty} puzzle with ${clues} clues (hash: ${hash.slice(0,8)}...)`, 'color: lime');
+
+    return { puzzle, hash };
   }
 }

@@ -42,11 +42,45 @@ export const updateProfile = async (updates: any) => {
   return { error };
 };
 
-// Improved realtime subscription – always safe, no duplicate channels
+// Add coins (used only on first completion)
+export const addCoins = async (amount: number) => {
+  const user = await getCurrentUser();
+  if (!user) return { error: new Error('No user') };
+  const profile = await getProfile();
+  const newCoins = (profile?.coins || 0) + amount;
+  const { error } = await supabase
+    .from('profiles')
+    .update({ coins: newCoins })
+    .eq('id', user.id);
+  return { error };
+};
+
+// NEW: Check if this puzzle hash has already been completed
+export const isFirstCompletion = async (puzzleHash: string): Promise<boolean> => {
+  const profile = await getProfile();
+  if (!profile) return true;
+  const completed = profile.completed_single_puzzles || [];
+  return !completed.includes(puzzleHash);
+};
+
+// NEW: Mark puzzle as completed (append hash)
+export const markPuzzleCompleted = async (puzzleHash: string) => {
+  const profile = await getProfile();
+  if (!profile) return { error: new Error('No profile') };
+  const completed = profile.completed_single_puzzles || [];
+  if (completed.includes(puzzleHash)) return { error: null };
+  completed.push(puzzleHash);
+  const { error } = await supabase
+    .from('profiles')
+    .update({ completed_single_puzzles: completed })
+    .eq('id', profile.id);
+  return { error };
+};
+
+// Improved realtime subscription
 export const subscribeToProfile = (callback: (profile: any) => void) => {
   let channel: any = null;
 
-  // Synchronous user check + subscription
   getCurrentUser().then(user => {
     if (!user) return;
     channel = supabase
@@ -64,7 +98,6 @@ export const subscribeToProfile = (callback: (profile: any) => void) => {
       .subscribe();
   });
 
-  // Always return a safe cleanup function
   return () => {
     if (channel) {
       supabase.removeChannel(channel);

@@ -4,6 +4,8 @@ import { TopBar } from '../components/TopBar';
 import { BackButton } from '../components/BackButton';
 import { CompletionModal } from '../modals/CompletionModal';
 import { getProfile } from '../services/supabaseClient';
+import { addCoins, isFirstCompletion, markPuzzleCompleted } from '../services/supabaseClient';
+import { SudokuGenerator } from '../game/SudokuGenerator';
 
 export class GamePlayScene extends Phaser.Scene {
   private board!: SudokuBoard;
@@ -11,6 +13,9 @@ export class GamePlayScene extends Phaser.Scene {
   private startTime: number = 0;
   private timerText!: Phaser.GameObjects.Text;
   private completionModal!: CompletionModal;
+  private difficulty: string = 'Asteroid Belt';
+  private puzzleHash: string = '';
+  private currentPuzzleData: any = {};
 
   constructor() {
     super('GamePlayScene');
@@ -20,7 +25,21 @@ export class GamePlayScene extends Phaser.Scene {
     new TopBar(this);
     new BackButton(this);
 
-    this.board = new SudokuBoard(this, data?.puzzle);
+    this.difficulty = data?.difficulty || 'Asteroid Belt';
+    this.currentPuzzleData = data || { difficulty: this.difficulty };
+
+    let generatedPuzzle: number[][] | undefined = data?.puzzle;
+    let generatedHash: string = data?.hash || '';
+    if (!generatedPuzzle) {
+      const generator = new SudokuGenerator();
+      const { puzzle, hash } = generator.generate(this.difficulty);
+      generatedPuzzle = puzzle;
+      generatedHash = hash;
+      this.currentPuzzleData = { mode: 'single', difficulty: this.difficulty, puzzle, hash };
+    }
+
+    this.puzzleHash = generatedHash;
+    this.board = new SudokuBoard(this, generatedPuzzle);
 
     const cellSize = 50;
     const startX = 640 - (9 * cellSize / 2) + 25;
@@ -70,7 +89,6 @@ export class GamePlayScene extends Phaser.Scene {
       });
     }
 
-    // Timer
     this.startTime = Date.now();
     this.timerText = this.add.text(640, 80, '0:00', {
       fontSize: '32px',
@@ -78,7 +96,6 @@ export class GamePlayScene extends Phaser.Scene {
       fontFamily: 'Arial'
     }).setOrigin(0.5).setDepth(200);
 
-    // Undo button (left of grid)
     const undoBtn = this.add.text(280, 380, '↩️', {
       fontSize: '42px',
       color: '#00ffff',
@@ -87,17 +104,14 @@ export class GamePlayScene extends Phaser.Scene {
       padding: { x: 12, y: 8 }
     }).setOrigin(0.5).setDepth(200).setInteractive();
 
-    undoBtn.on('pointerdown', () => {
-      this.board.undoLastMove();
-    });
+    undoBtn.on('pointerdown', () => this.board.undoLastMove());
 
-    // Dev-only Auto-Complete button (only for BotGamer4Real)
     this.checkForDevAutoCompleteButton();
 
-    // Completion listener
-    this.events.on('puzzleComplete', () => this.showCompletionModal());
+    // Use once to prevent multiple completion events (this was the source of the 40-coin bug)
+    this.events.once('puzzleComplete', () => this.showCompletionModal());
 
-    console.log('%c🎮 GamePlayScene ready with dev auto-complete button', 'color: cyan; font-size: 14px');
+    console.log(`%c🎮 GamePlayScene started with difficulty: ${this.difficulty}`, 'color: cyan; font-size: 14px');
   }
 
   private async checkForDevAutoCompleteButton(): Promise<void> {
@@ -115,8 +129,6 @@ export class GamePlayScene extends Phaser.Scene {
         console.log('%c🚀 Dev auto-complete activated', 'color: yellow; font-weight: bold');
         this.board.autoComplete();
       });
-
-      console.log('%c🔧 Dev Auto-Complete button added (BotGamer4Real)', 'color: yellow');
     }
   }
 
@@ -127,11 +139,33 @@ export class GamePlayScene extends Phaser.Scene {
     this.timerText.setText(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
   }
 
-  private showCompletionModal(): void {
+  private async showCompletionModal(): Promise<void> {
     const elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
-    const coinsEarned = 50;
+
+    const coinMap: { [key: string]: number } = {
+      'Asteroid Belt': 10,
+      'Nebula Drift': 25,
+      'Star Cluster': 50,
+      'Galaxy Edge': 80,
+      'Supernova': 150,
+      'Black Hole': 250
+    };
+    const coinsEarned = coinMap[this.difficulty] || 10;
+
+    console.log(`%cCoin calculation - Difficulty: "${this.difficulty}", Coins to award: ${coinsEarned}`, 'color: yellow');
+
+    let actualCoins = 0;
+    if (this.puzzleHash && await isFirstCompletion(this.puzzleHash)) {
+      actualCoins = coinsEarned;
+      const { error } = await addCoins(actualCoins);
+      if (error) console.error('Coin update error:', error);
+      await markPuzzleCompleted(this.puzzleHash);
+      console.log(`%c💰 First completion — awarded ${actualCoins} coins for ${this.difficulty}`, 'color: lime');
+    } else {
+      console.log('%c🔄 Replay — no coins awarded (already completed)', 'color: orange');
+    }
 
     this.completionModal = new CompletionModal(this);
-    this.completionModal.show(elapsedSeconds, coinsEarned, 'single', 'Asteroid Belt');
+    this.completionModal.show(elapsedSeconds, actualCoins, 'single', this.difficulty, this.currentPuzzleData);
   }
 }

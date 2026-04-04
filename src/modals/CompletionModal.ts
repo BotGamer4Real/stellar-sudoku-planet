@@ -9,20 +9,19 @@ export class CompletionModal {
     this.scene = scene;
   }
 
-  show(timeTaken: number, coinsEarned: number, _mode: string, _difficulty: string): void {
-    // === PREVENT STACKING ===
-    // Remove any leftover modal from previous game
+  show(timeTaken: number, coinsEarned: number, _mode: string, difficulty: string, replayData?: any): void {
+    // Prevent any possible stacking
     const existing = document.getElementById('completion-modal');
     if (existing) existing.remove();
 
-    // Blocker (same as SinglePlayerModal)
+    // Blocker
     this.blocker = this.scene.add.rectangle(640, 360, 1280, 720, 0x000000, 0.9)
       .setDepth(900)
       .setInteractive();
 
-    // Modal container
+    // Modal with NEW PUZZLE button
     this.container = document.createElement('div');
-    this.container.id = 'completion-modal';   // unique ID for cleanup
+    this.container.id = 'completion-modal';
     this.container.style.cssText = `
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: #1a1a2e; border: 6px solid #00ffff; border-radius: 20px;
@@ -44,24 +43,34 @@ export class CompletionModal {
         REPLAY THIS PUZZLE
       </button>
       
+      <button id="newPuzzleBtn" style="margin:15px; padding:16px 40px; background:#ffff00; color:#000; border:none; border-radius:10px; font-size:24px; cursor:pointer;">
+        NEW PUZZLE
+      </button>
+      
       <button id="menuBtn" style="margin:15px; padding:16px 40px; background:#00aaff; color:#ffffff; border:none; border-radius:10px; font-size:24px; cursor:pointer;">
         BACK TO MENU
       </button>
     `;
     document.getElementById('app')!.appendChild(this.container);
 
-    // Buttons – hide immediately, then navigate
     const replayBtn = this.container.querySelector('#replayBtn') as HTMLButtonElement;
+    const newPuzzleBtn = this.container.querySelector('#newPuzzleBtn') as HTMLButtonElement;
     const menuBtn = this.container.querySelector('#menuBtn') as HTMLButtonElement;
 
     replayBtn.addEventListener('click', () => {
-      console.log('%c🔄 Replay clicked — hiding modal instantly', 'color: lime');
       this.hide();
-      this.scene.scene.restart();
+      this.scene.scene.restart(replayData);   // pass exact same puzzle + hash
+    });
+
+    newPuzzleBtn.addEventListener('click', () => {
+      this.hide();
+      this.scene.scene.start('GamePlayScene', { 
+        mode: 'single', 
+        difficulty: difficulty 
+      });
     });
 
     menuBtn.addEventListener('click', () => {
-      console.log('%c🏠 Menu clicked — hiding modal instantly', 'color: lime');
       this.hide();
       this.scene.scene.start('MainMenuScene');
     });
@@ -74,6 +83,6 @@ export class CompletionModal {
     if (this.blocker) {
       this.blocker.destroy();
     }
-    console.log('%c✅ CompletionModal fully destroyed (no stacking)', 'color: lime');
+    console.log('%c✅ CompletionModal fully destroyed instantly', 'color: lime');
   }
 }
