@@ -42,7 +42,6 @@ export const updateProfile = async (updates: any) => {
   return { error };
 };
 
-// Add coins (used only on first completion)
 export const addCoins = async (amount: number) => {
   const user = await getCurrentUser();
   if (!user) return { error: new Error('No user') };
@@ -55,7 +54,6 @@ export const addCoins = async (amount: number) => {
   return { error };
 };
 
-// NEW: Check if this puzzle hash has already been completed
 export const isFirstCompletion = async (puzzleHash: string): Promise<boolean> => {
   const profile = await getProfile();
   if (!profile) return true;
@@ -63,7 +61,6 @@ export const isFirstCompletion = async (puzzleHash: string): Promise<boolean> =>
   return !completed.includes(puzzleHash);
 };
 
-// NEW: Mark puzzle as completed (append hash)
 export const markPuzzleCompleted = async (puzzleHash: string) => {
   const profile = await getProfile();
   if (!profile) return { error: new Error('No profile') };
@@ -77,7 +74,26 @@ export const markPuzzleCompleted = async (puzzleHash: string) => {
   return { error };
 };
 
-// Improved realtime subscription
+// NEW: Campaign helpers
+export const getCampaignLevelPuzzles = async (levelId: number) => {
+  const { data, error } = await supabase
+    .from('campaign_puzzles')
+    .select('*')
+    .eq('level_id', levelId)
+    .order('puzzle_index', { ascending: true });
+  if (error) console.error('Campaign puzzles fetch error:', error);
+  return data || [];
+};
+
+export const getNextCampaignLevel = async (currentLevel: number) => {
+  const profile = await getProfile();
+  const progress = profile?.campaign_progress || {};
+  const completedCount = progress[currentLevel] || 0;
+  if (completedCount >= 20) return currentLevel + 1;
+  return currentLevel;
+};
+
+// Realtime subscription (unchanged)
 export const subscribeToProfile = (callback: (profile: any) => void) => {
   let channel: any = null;
 
