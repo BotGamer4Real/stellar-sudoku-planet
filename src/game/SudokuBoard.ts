@@ -16,13 +16,13 @@ export class SudokuBoard {
   private moveHistory: { row: number; col: number; previousValue: number }[] = [];
   private placedCount: { [num: number]: number } = {};
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, initialPuzzle?: number[][]) {
     this.scene = scene;
-    this.initBoard();
+    this.initBoard(initialPuzzle);
   }
 
-  private initBoard(): void {
-    const givenPuzzle = [
+  private initBoard(initialPuzzle?: number[][]): void {
+    const puzzle = initialPuzzle || [
       [5,3,0,0,7,0,0,0,0],
       [6,0,0,1,9,5,0,0,0],
       [0,9,8,0,0,0,0,6,0],
@@ -43,7 +43,7 @@ export class SudokuBoard {
       this.cellTexts[row] = [];
       this.cellGraphics[row] = [];
       for (let col = 0; col < 9; col++) {
-        const value = givenPuzzle[row][col];
+        const value = puzzle[row][col];
         const given = value !== 0;
 
         this.cells[row][col] = { value, given, x: col, y: row };
@@ -71,7 +71,6 @@ export class SudokuBoard {
       }
     }
 
-    // Count initial givens
     this.updatePlacedCount();
   }
 
@@ -86,7 +85,6 @@ export class SudokuBoard {
   }
 
   private isValidMove(row: number, col: number, num: number): boolean {
-    // Check row, column, box
     for (let i = 0; i < 9; i++) {
       if (this.cells[row][i].value === num && i !== col) return false;
       if (this.cells[i][col].value === num && i !== row) return false;
@@ -131,10 +129,8 @@ export class SudokuBoard {
 
     this.updatePlacedCount();
 
-    // Auto-disappear completed numbers
     if (this.placedCount[num] === 9) {
       console.log(`%c✅ Number ${num} completed — auto-disappear`, 'color: lime');
-      // TODO: GraphicsGROK will add particle burst here later
     }
 
     console.log(`%c📍 Placed ${num} at (${row},${col})`, 'color: lime');

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SudokuGenerator } from '../game/SudokuGenerator';
 
 const DIFFICULTIES = [
   { name: 'Asteroid Belt', label: 'Easy', color: '#00ff00' },
@@ -19,12 +20,10 @@ export class SinglePlayerModal {
   }
 
   show(): void {
-    // Blocker
     this.blocker = this.scene.add.rectangle(640, 360, 1280, 720, 0x000000, 0.85)
       .setDepth(900)
       .setInteractive();
 
-    // Modal
     this.container = document.createElement('div');
     this.container.style.cssText = `
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -37,7 +36,6 @@ export class SinglePlayerModal {
       <h3 style="color:#aaaaaa; margin-bottom:20px;">Choose Difficulty</h3>
     `;
 
-    // Add difficulty buttons
     DIFFICULTIES.forEach(diff => {
       const btn = document.createElement('button');
       btn.style.cssText = `
@@ -55,8 +53,16 @@ export class SinglePlayerModal {
 
   private selectDifficulty(difficultyName: string): void {
     console.log(`%c🎯 Single Player selected: ${difficultyName}`, 'color: lime');
+    
+    const generator = new SudokuGenerator();
+    const puzzle = generator.generate(difficultyName);
+
     this.hide();
-    this.scene.scene.start('GamePlayScene', { mode: 'single', difficulty: difficultyName });
+    this.scene.scene.start('GamePlayScene', { 
+      mode: 'single', 
+      difficulty: difficultyName,
+      puzzle: puzzle 
+    });
   }
 
   hide(): void {
