@@ -42,24 +42,34 @@ export const updateProfile = async (updates: any) => {
   return { error };
 };
 
-// Realtime subscription helper
+// Fixed realtime subscription
 export const subscribeToProfile = (callback: (profile: any) => void) => {
-  getCurrentUser().then(u => {
-    if (!u) return;
-    return supabase
-      .channel('profile-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'profiles',
-        filter: `id=eq.${u.id}`
-      }, (payload) => callback(payload.new))
+  let channel: any = null;
+
+  getCurrentUser().then(user => {
+    if (!user) return;
+    channel = supabase
+      .channel(`profile-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => callback(payload.new)
+      )
       .subscribe();
   });
-  return () => supabase.removeAllChannels(); // cleanup function
+
+  // Return cleanup function
+  return () => {
+    if (channel) supabase.removeChannel(channel);
+  };
 };
 
-// Auth helpers
+// Auth helpers (unchanged)
 export const signUpWithEmailAndUsername = async (email: string, password: string, username: string) => {
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email, password, options: { emailRedirectTo: window.location.origin }

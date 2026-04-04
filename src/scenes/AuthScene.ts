@@ -20,22 +20,24 @@ export class AuthScene extends Phaser.Scene {
     this.formContainer = document.createElement('div');
     this.formContainer.className = 'auth-form';
     this.formContainer.innerHTML = `
-      <h2 id="formTitle" style="color:#00ffff; margin-bottom:20px;">Sign in to continue</h2>
-      
-      <input type="email" id="email" placeholder="Email address" autocomplete="username" />
-      <input type="text" id="username" placeholder="Username (unique)" style="display:none;" />
-      <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
-      <input type="password" id="confirmPassword" placeholder="Confirm password" style="display:none;" />
+      <form id="authForm">
+        <h2 id="formTitle" style="color:#00ffff; margin-bottom:20px;">Sign in to continue</h2>
+        
+        <input type="email" id="email" placeholder="Email address" autocomplete="username" />
+        <input type="text" id="username" placeholder="Username (unique)" style="display:none;" />
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
+        <input type="password" id="confirmPassword" placeholder="Confirm password" style="display:none;" />
 
-      <button id="mainActionBtn">SIGN IN</button>
-      <button id="resetBtn" style="background:#00aaff; color:#ffffff;">FORGOT PASSWORD</button>
-      
-      <div style="margin-top:20px; color:#aaaaaa; font-size:18px;">
-        <span id="toggleLink" style="cursor:pointer; text-decoration:underline;">SIGN UP</span>
-      </div>
+        <button id="mainActionBtn" type="button">SIGN IN</button>
+        <button id="resetBtn" type="button" style="background:#00aaff; color:#ffffff;">FORGOT PASSWORD</button>
+        
+        <div style="margin-top:20px; color:#aaaaaa; font-size:18px;">
+          <span id="toggleLink" style="cursor:pointer; text-decoration:underline;">SIGN UP</span>
+        </div>
 
-      <button id="googleBtn" class="placeholder-btn">CONTINUE WITH GOOGLE (placeholder)</button>
-      <button id="xBtn" class="placeholder-btn">CONTINUE WITH X (placeholder)</button>
+        <button id="googleBtn" class="placeholder-btn" type="button">CONTINUE WITH GOOGLE (placeholder)</button>
+        <button id="xBtn" class="placeholder-btn" type="button">CONTINUE WITH X (placeholder)</button>
+      </form>
     `;
     document.getElementById('app')!.appendChild(this.formContainer);
 

@@ -4,7 +4,7 @@ import { TopBar } from '../components/TopBar';
 
 export class GamePlayScene extends Phaser.Scene {
   private board!: SudokuBoard;
-  private ghostText: Phaser.GameObjects.Text | null = null;
+  private ghostText: Phaser.GameObjects.Text | null = null;   // declared here
 
   constructor() {
     super('GamePlayScene');
@@ -56,7 +56,6 @@ export class GamePlayScene extends Phaser.Scene {
           this.ghostText = null;
         }
 
-        // Improved drop detection with tolerance and Math.round
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const col = Math.round((worldPoint.x - startX) / cellSize);
         const row = Math.round((worldPoint.y - startY) / cellSize);
@@ -74,6 +73,6 @@ export class GamePlayScene extends Phaser.Scene {
       fontFamily: 'Arial'
     }).setOrigin(0.5);
 
-    console.log('%c🎮 GamePlayScene ready with improved drag-and-drop precision', 'color: cyan; font-size: 14px');
+    console.log('%c🎮 GamePlayScene ready with drag-and-drop + ghost preview', 'color: cyan; font-size: 14px');
   }
 }

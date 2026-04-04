@@ -14,6 +14,7 @@ export class SudokuBoard {
   private cellGraphics: Phaser.GameObjects.Rectangle[][] = [];
   private selectedNumber: number = 0;
   private moveHistory: { row: number; col: number; previousValue: number }[] = [];
+  private placedCount: { [num: number]: number } = {};
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -69,6 +70,36 @@ export class SudokuBoard {
         gfx.on('pointerdown', () => this.selectCell(row, col));
       }
     }
+
+    // Count initial givens
+    this.updatePlacedCount();
+  }
+
+  private updatePlacedCount(): void {
+    this.placedCount = {};
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        const v = this.cells[row][col].value;
+        if (v > 0) this.placedCount[v] = (this.placedCount[v] || 0) + 1;
+      }
+    }
+  }
+
+  private isValidMove(row: number, col: number, num: number): boolean {
+    // Check row, column, box
+    for (let i = 0; i < 9; i++) {
+      if (this.cells[row][i].value === num && i !== col) return false;
+      if (this.cells[i][col].value === num && i !== row) return false;
+    }
+    const boxRow = Math.floor(row / 3) * 3;
+    const boxCol = Math.floor(col / 3) * 3;
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        if (this.cells[boxRow + i][boxCol + j].value === num &&
+            (boxRow + i !== row || boxCol + j !== col)) return false;
+      }
+    }
+    return true;
   }
 
   private selectCell(row: number, col: number): void {
@@ -85,14 +116,25 @@ export class SudokuBoard {
     const cell = this.cells[row][col];
     if (cell.given) return;
 
+    if (num > 0 && !this.isValidMove(row, col, num)) {
+      console.log('%c❌ Invalid move!', 'color: red');
+      return;
+    }
+
     const previousValue = cell.value;
     cell.value = num;
 
     this.cellTexts[row][col].setText(num === 0 ? '' : num.toString());
     this.cellTexts[row][col].setColor('#ffffff');
 
-    if (num !== 0) {
-      this.moveHistory.push({ row, col, previousValue });
+    if (num !== 0) this.moveHistory.push({ row, col, previousValue });
+
+    this.updatePlacedCount();
+
+    // Auto-disappear completed numbers
+    if (this.placedCount[num] === 9) {
+      console.log(`%c✅ Number ${num} completed — auto-disappear`, 'color: lime');
+      // TODO: GraphicsGROK will add particle burst here later
     }
 
     console.log(`%c📍 Placed ${num} at (${row},${col})`, 'color: lime');
@@ -104,6 +146,7 @@ export class SudokuBoard {
     const { row, col, previousValue } = lastMove;
     this.cells[row][col].value = previousValue;
     this.cellTexts[row][col].setText(previousValue === 0 ? '' : previousValue.toString());
+    this.updatePlacedCount();
     console.log('%c↩️ Undo performed', 'color: yellow');
   }
 
