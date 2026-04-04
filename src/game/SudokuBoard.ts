@@ -33,9 +33,9 @@ export class SudokuBoard {
       [0,0,0,0,8,0,0,7,9]
     ];
 
-    const cellSize = 50;                              // ~20% smaller
-    const startX = 640 - (9 * cellSize / 2) + 25;     // centered
-    const startY = 130;                               // below TopBar
+    const cellSize = 50;
+    const startX = 640 - (9 * cellSize / 2) + 25;
+    const startY = 130;
 
     for (let row = 0; row < 9; row++) {
       this.cells[row] = [];
