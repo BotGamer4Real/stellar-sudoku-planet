@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TopBar } from '../components/TopBar';
 import { SinglePlayerModal } from '../modals/SinglePlayerModal';
+import { CampaignSelectModal } from '../modals/CampaignSelectModal';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -8,7 +9,6 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Persistent TopBar (Profile + Coins + Settings)
     new TopBar(this);
 
     this.add.text(640, 200, 'MAIN MENU', {
@@ -33,7 +33,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const campaignBtn = this.add.text(640, 470, 'CAMPAIGN', {
       fontSize: '32px',
-      color: '#00ff00',
+      color: '#00ccff',
       fontFamily: 'Arial',
       backgroundColor: '#222244',
       padding: { x: 40, y: 15 }
@@ -41,21 +41,26 @@ export class MainMenuScene extends Phaser.Scene {
 
     const dailyBtn = this.add.text(640, 540, 'DAILY CHALLENGE', {
       fontSize: '32px',
-      color: '#00ff00',
+      color: '#ffaa00',
       fontFamily: 'Arial',
       backgroundColor: '#222244',
       padding: { x: 40, y: 15 }
     }).setOrigin(0.5).setInteractive();
 
     singlePlayerBtn.on('pointerdown', () => {
-      console.log('%c🚀 Opening Single Player difficulty modal', 'color: cyan');
       const modal = new SinglePlayerModal(this);
       modal.show();
     });
 
-    campaignBtn.on('pointerdown', () => console.log('%c🏆 Campaign selected (coming soon)', 'color: lime'));
-    dailyBtn.on('pointerdown', () => console.log('%c📅 Daily Challenge selected (coming soon)', 'color: lime'));
+    campaignBtn.on('pointerdown', async () => {
+      const modal = new CampaignSelectModal(this);
+      await modal.show();
+    });
 
-    console.log('%c🏠 MainMenuScene loaded with Single Player modal', 'color: cyan; font-size: 14px');
+    dailyBtn.on('pointerdown', () => {
+      console.log('%c📅 Daily Challenge selected (coming in Step 29)', 'color: orange');
+    });
+
+    console.log('%c🏠 MainMenuScene ready with CampaignSelectModal', 'color: cyan; font-size: 14px');
   }
 }

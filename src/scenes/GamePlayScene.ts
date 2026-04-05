@@ -3,8 +3,9 @@ import { SudokuBoard } from '../game/SudokuBoard';
 import { TopBar } from '../components/TopBar';
 import { BackButton } from '../components/BackButton';
 import { CompletionModal } from '../modals/CompletionModal';
+import { CampaignCompletedModal } from '../modals/CampaignCompletedModal';
 import { getProfile } from '../services/supabaseClient';
-import { addCoins, isFirstCompletion, markPuzzleCompleted } from '../services/supabaseClient';
+import { addCoins, isFirstCompletion, markPuzzleCompleted, updateCampaignProgress, getCampaignProgress } from '../services/supabaseClient';
 import { SudokuGenerator } from '../game/SudokuGenerator';
 
 export class GamePlayScene extends Phaser.Scene {
@@ -13,7 +14,10 @@ export class GamePlayScene extends Phaser.Scene {
   private startTime: number = 0;
   private timerText!: Phaser.GameObjects.Text;
   private completionModal!: CompletionModal;
+  private campaignCompletedModal!: CampaignCompletedModal;
+  private mode: string = 'single';
   private difficulty: string = 'Asteroid Belt';
+  private levelId: number = 1;
   private puzzleHash: string = '';
   private currentPuzzleData: any = {};
 
@@ -25,8 +29,10 @@ export class GamePlayScene extends Phaser.Scene {
     new TopBar(this);
     new BackButton(this);
 
+    this.mode = data?.mode || 'single';
     this.difficulty = data?.difficulty || 'Asteroid Belt';
-    this.currentPuzzleData = data || { difficulty: this.difficulty };
+    this.levelId = data?.levelId || 1;
+    this.currentPuzzleData = data || { mode: this.mode, difficulty: this.difficulty, levelId: this.levelId };
 
     let generatedPuzzle: number[][] | undefined = data?.puzzle;
     let generatedHash: string = data?.hash || '';
@@ -35,7 +41,7 @@ export class GamePlayScene extends Phaser.Scene {
       const { puzzle, hash } = generator.generate(this.difficulty);
       generatedPuzzle = puzzle;
       generatedHash = hash;
-      this.currentPuzzleData = { mode: 'single', difficulty: this.difficulty, puzzle, hash };
+      this.currentPuzzleData = { ...this.currentPuzzleData, puzzle, hash };
     }
 
     this.puzzleHash = generatedHash;
@@ -45,7 +51,6 @@ export class GamePlayScene extends Phaser.Scene {
     const startX = 640 - (9 * cellSize / 2) + 25;
     const startY = 130;
 
-    // Number pad
     for (let i = 1; i <= 9; i++) {
       const btn = this.add.text(
         startX + (i - 1) * cellSize, 
@@ -108,10 +113,9 @@ export class GamePlayScene extends Phaser.Scene {
 
     this.checkForDevAutoCompleteButton();
 
-    // Use once to prevent multiple completion events (this was the source of the 40-coin bug)
     this.events.once('puzzleComplete', () => this.showCompletionModal());
 
-    console.log(`%c🎮 GamePlayScene started with difficulty: ${this.difficulty}`, 'color: cyan; font-size: 14px');
+    console.log(`%c🎮 GamePlayScene ready - Mode: ${this.mode} | Difficulty: ${this.difficulty}`, 'color: cyan; font-size: 14px');
   }
 
   private async checkForDevAutoCompleteButton(): Promise<void> {
@@ -150,22 +154,40 @@ export class GamePlayScene extends Phaser.Scene {
       'Supernova': 150,
       'Black Hole': 250
     };
-    const coinsEarned = coinMap[this.difficulty] || 10;
-
-    console.log(`%cCoin calculation - Difficulty: "${this.difficulty}", Coins to award: ${coinsEarned}`, 'color: yellow');
+    const normalCoins = coinMap[this.difficulty] || 10;
 
     let actualCoins = 0;
-    if (this.puzzleHash && await isFirstCompletion(this.puzzleHash)) {
-      actualCoins = coinsEarned;
+
+    if (this.mode === 'single') {
+      if (this.puzzleHash && await isFirstCompletion(this.puzzleHash)) {
+        actualCoins = normalCoins;
+        const { error } = await addCoins(actualCoins);
+        if (error) console.error('Coin update error:', error);
+        await markPuzzleCompleted(this.puzzleHash);
+      }
+    } else {
+      actualCoins = normalCoins;
       const { error } = await addCoins(actualCoins);
       if (error) console.error('Coin update error:', error);
-      await markPuzzleCompleted(this.puzzleHash);
-      console.log(`%c💰 First completion — awarded ${actualCoins} coins for ${this.difficulty}`, 'color: lime');
-    } else {
-      console.log('%c🔄 Replay — no coins awarded (already completed)', 'color: orange');
+
+      const progress = await getCampaignProgress();
+      let currentCompleted = (progress[this.levelId] || 0) + 1;
+      if (currentCompleted > 20) currentCompleted = 20;
+      await updateCampaignProgress(this.levelId, currentCompleted);
+
+      if (currentCompleted === 20) {
+        const tierBonusMap: { [key: number]: number } = { 1: 100, 2: 500, 3: 1500, 4: 5000, 5: 12000, 6: 20000 };
+        const tierBonus = tierBonusMap[this.levelId] || 0;
+        if (tierBonus > 0) {
+          await addCoins(tierBonus);
+        }
+        this.campaignCompletedModal = new CampaignCompletedModal(this);
+        this.campaignCompletedModal.show(this.difficulty, tierBonus);
+        return;
+      }
     }
 
     this.completionModal = new CompletionModal(this);
-    this.completionModal.show(elapsedSeconds, actualCoins, 'single', this.difficulty, this.currentPuzzleData);
+    this.completionModal.show(elapsedSeconds, actualCoins, this.mode, this.difficulty, this.currentPuzzleData);
   }
 }

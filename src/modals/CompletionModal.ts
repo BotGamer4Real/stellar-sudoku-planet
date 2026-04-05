@@ -9,8 +9,8 @@ export class CompletionModal {
     this.scene = scene;
   }
 
-  show(timeTaken: number, coinsEarned: number, _mode: string, difficulty: string, replayData?: any): void {
-    // Prevent any possible stacking
+  show(timeTaken: number, coinsEarned: number, mode: string, difficulty: string, replayData?: any): void {
+    // Prevent stacking
     const existing = document.getElementById('completion-modal');
     if (existing) existing.remove();
 
@@ -19,7 +19,9 @@ export class CompletionModal {
       .setDepth(900)
       .setInteractive();
 
-    // Modal with NEW PUZZLE button
+    // Dynamic button text
+    const newBtnText = mode === 'campaign' ? 'NEXT PUZZLE' : 'NEW PUZZLE';
+
     this.container = document.createElement('div');
     this.container.id = 'completion-modal';
     this.container.style.cssText = `
@@ -44,7 +46,7 @@ export class CompletionModal {
       </button>
       
       <button id="newPuzzleBtn" style="margin:15px; padding:16px 40px; background:#ffff00; color:#000; border:none; border-radius:10px; font-size:24px; cursor:pointer;">
-        NEW PUZZLE
+        ${newBtnText}
       </button>
       
       <button id="menuBtn" style="margin:15px; padding:16px 40px; background:#00aaff; color:#ffffff; border:none; border-radius:10px; font-size:24px; cursor:pointer;">
@@ -59,15 +61,18 @@ export class CompletionModal {
 
     replayBtn.addEventListener('click', () => {
       this.hide();
-      this.scene.scene.restart(replayData);   // pass exact same puzzle + hash
+      this.scene.scene.restart(replayData);
     });
 
     newPuzzleBtn.addEventListener('click', () => {
       this.hide();
-      this.scene.scene.start('GamePlayScene', { 
-        mode: 'single', 
-        difficulty: difficulty 
-      });
+      if (mode === 'campaign') {
+        // Next puzzle in the same level
+        this.scene.scene.start('GamePlayScene', replayData);
+      } else {
+        // Single Player - fresh puzzle of same difficulty
+        this.scene.scene.start('GamePlayScene', { mode: 'single', difficulty: difficulty });
+      }
     });
 
     menuBtn.addEventListener('click', () => {
@@ -77,12 +82,8 @@ export class CompletionModal {
   }
 
   hide(): void {
-    if (this.container && this.container.parentNode) {
-      this.container.parentNode.removeChild(this.container);
-    }
-    if (this.blocker) {
-      this.blocker.destroy();
-    }
+    if (this.container && this.container.parentNode) this.container.parentNode.removeChild(this.container);
+    if (this.blocker) this.blocker.destroy();
     console.log('%c✅ CompletionModal fully destroyed instantly', 'color: lime');
   }
 }

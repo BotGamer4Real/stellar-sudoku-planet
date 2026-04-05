@@ -54,6 +54,17 @@ export const addCoins = async (amount: number) => {
   return { error };
 };
 
+// NEW: Reset all campaign progress (for testing)
+export const resetCampaignProgress = async () => {
+  const user = await getCurrentUser();
+  if (!user) return { error: new Error('No user') };
+  const { error } = await supabase
+    .from('profiles')
+    .update({ campaign_progress: {} })
+    .eq('id', user.id);
+  return { error };
+};
+
 export const isFirstCompletion = async (puzzleHash: string): Promise<boolean> => {
   const profile = await getProfile();
   if (!profile) return true;
@@ -74,7 +85,6 @@ export const markPuzzleCompleted = async (puzzleHash: string) => {
   return { error };
 };
 
-// NEW: Campaign helpers
 export const getCampaignLevelPuzzles = async (levelId: number) => {
   const { data, error } = await supabase
     .from('campaign_puzzles')
@@ -85,35 +95,36 @@ export const getCampaignLevelPuzzles = async (levelId: number) => {
   return data || [];
 };
 
-export const getNextCampaignLevel = async (currentLevel: number) => {
+export const getCampaignProgress = async () => {
   const profile = await getProfile();
-  const progress = profile?.campaign_progress || {};
-  const completedCount = progress[currentLevel] || 0;
-  if (completedCount >= 20) return currentLevel + 1;
-  return currentLevel;
+  return profile?.campaign_progress || {};
 };
 
-// Realtime subscription (unchanged)
+export const updateCampaignProgress = async (levelId: number, completedCount: number) => {
+  const user = await getCurrentUser();
+  if (!user) return { error: new Error('No user') };
+  const progress = await getCampaignProgress();
+  progress[levelId] = completedCount;
+  const { error } = await supabase
+    .from('profiles')
+    .update({ campaign_progress: progress })
+    .eq('id', user.id);
+  return { error };
+};
+
 export const subscribeToProfile = (callback: (profile: any) => void) => {
   let channel: any = null;
-
   getCurrentUser().then(user => {
     if (!user) return;
     channel = supabase
       .channel(`profile-${user.id}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${user.id}`
-        },
+        { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
         (payload) => callback(payload.new)
       )
       .subscribe();
   });
-
   return () => {
     if (channel) {
       supabase.removeChannel(channel);
