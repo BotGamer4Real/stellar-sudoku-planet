@@ -5,7 +5,7 @@ import { BackButton } from '../components/BackButton';
 import { CompletionModal } from '../modals/CompletionModal';
 import { CampaignCompletedModal } from '../modals/CampaignCompletedModal';
 import { getProfile } from '../services/supabaseClient';
-import { addCoins, isFirstCompletion, markPuzzleCompleted, isCampaignPuzzleFirstCompletion, markCampaignPuzzleCompleted, updateCampaignProgress, getCampaignProgress } from '../services/supabaseClient';
+import { addCoins, isFirstCompletion, markPuzzleCompleted, isCampaignPuzzleFirstCompletion, markCampaignPuzzleCompleted, updateCampaignProgress, getCampaignProgress, getCampaignLevelPuzzles } from '../services/supabaseClient';
 import { SudokuGenerator } from '../game/SudokuGenerator';
 
 export class GamePlayScene extends Phaser.Scene {
@@ -25,7 +25,9 @@ export class GamePlayScene extends Phaser.Scene {
     super('GamePlayScene');
   }
 
-  create(data?: any): void {
+create(data?: any): void {
+    console.log('%c📥 GamePlayScene.create() received data:', 'color: orange; font-weight: bold', data);
+
     new TopBar(this);
     new BackButton(this);
 
@@ -34,33 +36,50 @@ export class GamePlayScene extends Phaser.Scene {
     this.levelId = data?.levelId || 1;
     this.currentPuzzleData = data || { mode: this.mode, difficulty: this.difficulty, levelId: this.levelId };
 
-    // === LEVEL INDICATOR (visible below TopBar, no overlap) ===
+    console.log(`%c✅ Final levelId used: ${this.levelId}`, 'color: lime; font-weight: bold');
+
+    // === LEVEL INDICATOR (above timer) ===
     const levelText = this.mode === 'campaign' 
       ? `CAMPAIGN LEVEL ${this.levelId} — ${this.difficulty}` 
       : `SINGLE PLAYER — ${this.difficulty}`;
-    this.add.text(640, 165, levelText, {
+    this.add.text(640, 55, levelText, {
       fontSize: '28px',
       color: '#ffff00',
       fontFamily: 'Arial',
       fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(300);
+    }).setOrigin(0.5).setDepth(810);
 
     let generatedPuzzle: number[][] | undefined = data?.puzzle;
     let generatedHash: string = data?.hash || '';
+
+    if (this.mode === 'campaign' && !generatedPuzzle) {
+      getCampaignLevelPuzzles(this.levelId).then((puzzles: any[]) => {
+        if (puzzles.length > 0) {
+          const puzzleData = puzzles[0];
+          generatedPuzzle = puzzleData.puzzle as number[][];
+          generatedHash = puzzleData.hash || '';
+          console.log(`%c✅ Loaded campaign puzzle from DB for level ${this.levelId}`, 'color: lime');
+          this.puzzleHash = generatedHash;
+          this.board = new SudokuBoard(this, generatedPuzzle);
+        }
+      });
+    }
+
     if (!generatedPuzzle) {
       const generator = new SudokuGenerator();
       const { puzzle, hash } = generator.generate(this.difficulty);
       generatedPuzzle = puzzle;
       generatedHash = hash;
-      this.currentPuzzleData = { ...this.currentPuzzleData, puzzle, hash };
     }
 
-    this.puzzleHash = generatedHash;
-    this.board = new SudokuBoard(this, generatedPuzzle);
+    if (!this.board) {
+      this.puzzleHash = generatedHash;
+      this.board = new SudokuBoard(this, generatedPuzzle);
+    }
 
     const cellSize = 50;
     const startX = 640 - (9 * cellSize / 2) + 25;
-    const startY = 210;   // moved grid down slightly to give space for level text
+    const startY = 210;
 
     for (let i = 1; i <= 9; i++) {
       const btn = this.add.text(

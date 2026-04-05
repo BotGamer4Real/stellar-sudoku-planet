@@ -17,7 +17,7 @@ export class TopBar {
   private async create(title: string): Promise<void> {
     this.container = this.scene.add.container(0, 0);
 
-    // Slightly taller bar to fit Profile + Coins + Level title comfortably
+    // Taller bar to fit Profile + Coins + Level title
     const bar = this.scene.add.rectangle(640, 65, 1280, 160, 0x0a0a2a, 0.95).setDepth(800);
     this.container.add(bar);
 
@@ -27,7 +27,7 @@ export class TopBar {
       backgroundColor: '#222244', padding: { x: 20, y: 10 }
     }).setOrigin(0.5).setDepth(810).setInteractive();
 
-    // Cosmic coins directly below Profile
+    // Cosmic coins directly below Profile (left side)
     this.coinsDisplay = this.scene.add.text(160, 88, '🪙 0', {
       fontSize: '28px', color: '#ffff00', fontFamily: 'Arial',
       backgroundColor: '#222244', padding: { x: 24, y: 8 }
@@ -39,7 +39,7 @@ export class TopBar {
       backgroundColor: '#222244', padding: { x: 20, y: 10 }
     }).setOrigin(0.5).setDepth(810).setInteractive();
 
-    // Level / Mode title – centered inside TopBar
+    // Level indicator centered inside TopBar
     if (title) {
       const titleText = this.scene.add.text(640, 125, title, {
         fontSize: '28px',

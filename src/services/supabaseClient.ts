@@ -32,7 +32,6 @@ export const getProfile = async () => {
   return data;
 };
 
-// ✅ Added back for SettingsModal + ProfileModal
 export const updateProfile = async (updates: any) => {
   const user = await getCurrentUser();
   if (!user) return { error: new Error('No user') };
@@ -103,6 +102,17 @@ export const markPuzzleCompleted = async (puzzleHash: string) => {
     .update({ completed_single_puzzles: completed })
     .eq('id', profile.id);
   return { error };
+};
+
+// ✅ Missing function added
+export const getCampaignLevelPuzzles = async (levelId: number) => {
+  const { data, error } = await supabase
+    .from('campaign_puzzles')
+    .select('*')
+    .eq('level_id', levelId)
+    .order('puzzle_index', { ascending: true });
+  if (error) console.error('Campaign puzzles fetch error:', error);
+  return data || [];
 };
 
 export const getCampaignProgress = async () => {
