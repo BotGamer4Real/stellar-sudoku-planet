@@ -32,6 +32,7 @@ export const getProfile = async () => {
   return data;
 };
 
+// ✅ Added back for SettingsModal + ProfileModal
 export const updateProfile = async (updates: any) => {
   const user = await getCurrentUser();
   if (!user) return { error: new Error('No user') };
@@ -54,13 +55,32 @@ export const addCoins = async (amount: number) => {
   return { error };
 };
 
-// NEW: Reset all campaign progress (for testing)
+export const isCampaignPuzzleFirstCompletion = async (puzzleHash: string): Promise<boolean> => {
+  const profile = await getProfile();
+  if (!profile) return true;
+  const completed = profile.completed_campaign_puzzles || [];
+  return !completed.includes(puzzleHash);
+};
+
+export const markCampaignPuzzleCompleted = async (puzzleHash: string) => {
+  const profile = await getProfile();
+  if (!profile) return { error: new Error('No profile') };
+  const completed = profile.completed_campaign_puzzles || [];
+  if (completed.includes(puzzleHash)) return { error: null };
+  completed.push(puzzleHash);
+  const { error } = await supabase
+    .from('profiles')
+    .update({ completed_campaign_puzzles: completed })
+    .eq('id', profile.id);
+  return { error };
+};
+
 export const resetCampaignProgress = async () => {
   const user = await getCurrentUser();
   if (!user) return { error: new Error('No user') };
   const { error } = await supabase
     .from('profiles')
-    .update({ campaign_progress: {} })
+    .update({ campaign_progress: {}, completed_campaign_puzzles: [] })
     .eq('id', user.id);
   return { error };
 };
@@ -83,16 +103,6 @@ export const markPuzzleCompleted = async (puzzleHash: string) => {
     .update({ completed_single_puzzles: completed })
     .eq('id', profile.id);
   return { error };
-};
-
-export const getCampaignLevelPuzzles = async (levelId: number) => {
-  const { data, error } = await supabase
-    .from('campaign_puzzles')
-    .select('*')
-    .eq('level_id', levelId)
-    .order('puzzle_index', { ascending: true });
-  if (error) console.error('Campaign puzzles fetch error:', error);
-  return data || [];
 };
 
 export const getCampaignProgress = async () => {
@@ -133,7 +143,6 @@ export const subscribeToProfile = (callback: (profile: any) => void) => {
   };
 };
 
-// Auth helpers (unchanged)
 export const signUpWithEmailAndUsername = async (email: string, password: string, username: string) => {
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email, password, options: { emailRedirectTo: window.location.origin }

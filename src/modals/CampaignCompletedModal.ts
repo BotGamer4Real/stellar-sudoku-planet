@@ -9,7 +9,10 @@ export class CampaignCompletedModal {
     this.scene = scene;
   }
 
-  show(levelName: string, tierBonus: number): void {
+  show(levelName: string, tierBonus: number, currentLevelId: number): void {
+    const isFinalLevel = currentLevelId === 6;
+    const buttonText = isFinalLevel ? 'BACK TO MAIN MENU' : 'CONTINUE TO NEXT LEVEL';
+
     this.blocker = this.scene.add.rectangle(640, 360, 1280, 720, 0x000000, 0.9)
       .setDepth(900)
       .setInteractive();
@@ -34,7 +37,7 @@ export class CampaignCompletedModal {
       </div>
       
       <button id="continueBtn" style="margin-top:40px; padding:18px 80px; background:#00ff00; color:#000; border:none; border-radius:12px; font-size:26px; cursor:pointer;">
-        CONTINUE TO NEXT LEVEL
+        ${buttonText}
       </button>
     `;
     document.getElementById('app')!.appendChild(this.container);
@@ -42,7 +45,18 @@ export class CampaignCompletedModal {
     const continueBtn = this.container.querySelector('#continueBtn') as HTMLButtonElement;
     continueBtn.addEventListener('click', () => {
       this.hide();
-      this.scene.scene.start('MainMenuScene');
+      if (isFinalLevel) {
+        this.scene.scene.start('MainMenuScene');
+      } else {
+        const nextLevelId = currentLevelId + 1;
+        const difficulties = ['Asteroid Belt', 'Nebula Drift', 'Star Cluster', 'Galaxy Edge', 'Supernova', 'Black Hole'];
+        const nextDifficulty = difficulties[nextLevelId - 1];
+        this.scene.scene.start('GamePlayScene', { 
+          mode: 'campaign', 
+          levelId: nextLevelId, 
+          difficulty: nextDifficulty 
+        });
+      }
     });
   }
 

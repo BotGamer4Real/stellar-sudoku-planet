@@ -5,7 +5,7 @@ import { BackButton } from '../components/BackButton';
 import { CompletionModal } from '../modals/CompletionModal';
 import { CampaignCompletedModal } from '../modals/CampaignCompletedModal';
 import { getProfile } from '../services/supabaseClient';
-import { addCoins, isFirstCompletion, markPuzzleCompleted, updateCampaignProgress, getCampaignProgress } from '../services/supabaseClient';
+import { addCoins, isFirstCompletion, markPuzzleCompleted, isCampaignPuzzleFirstCompletion, markCampaignPuzzleCompleted, updateCampaignProgress, getCampaignProgress } from '../services/supabaseClient';
 import { SudokuGenerator } from '../game/SudokuGenerator';
 
 export class GamePlayScene extends Phaser.Scene {
@@ -34,6 +34,17 @@ export class GamePlayScene extends Phaser.Scene {
     this.levelId = data?.levelId || 1;
     this.currentPuzzleData = data || { mode: this.mode, difficulty: this.difficulty, levelId: this.levelId };
 
+    // === LEVEL INDICATOR (visible below TopBar, no overlap) ===
+    const levelText = this.mode === 'campaign' 
+      ? `CAMPAIGN LEVEL ${this.levelId} — ${this.difficulty}` 
+      : `SINGLE PLAYER — ${this.difficulty}`;
+    this.add.text(640, 165, levelText, {
+      fontSize: '28px',
+      color: '#ffff00',
+      fontFamily: 'Arial',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(300);
+
     let generatedPuzzle: number[][] | undefined = data?.puzzle;
     let generatedHash: string = data?.hash || '';
     if (!generatedPuzzle) {
@@ -49,7 +60,7 @@ export class GamePlayScene extends Phaser.Scene {
 
     const cellSize = 50;
     const startX = 640 - (9 * cellSize / 2) + 25;
-    const startY = 130;
+    const startY = 210;   // moved grid down slightly to give space for level text
 
     for (let i = 1; i <= 9; i++) {
       const btn = this.add.text(
@@ -115,7 +126,7 @@ export class GamePlayScene extends Phaser.Scene {
 
     this.events.once('puzzleComplete', () => this.showCompletionModal());
 
-    console.log(`%c🎮 GamePlayScene ready - Mode: ${this.mode} | Difficulty: ${this.difficulty}`, 'color: cyan; font-size: 14px');
+    console.log(`%c🎮 GamePlayScene ready - Mode: ${this.mode} | Difficulty: ${this.difficulty} | Level: ${this.levelId}`, 'color: cyan; font-size: 14px');
   }
 
   private async checkForDevAutoCompleteButton(): Promise<void> {
@@ -161,14 +172,15 @@ export class GamePlayScene extends Phaser.Scene {
     if (this.mode === 'single') {
       if (this.puzzleHash && await isFirstCompletion(this.puzzleHash)) {
         actualCoins = normalCoins;
-        const { error } = await addCoins(actualCoins);
-        if (error) console.error('Coin update error:', error);
+        await addCoins(actualCoins);
         await markPuzzleCompleted(this.puzzleHash);
       }
     } else {
-      actualCoins = normalCoins;
-      const { error } = await addCoins(actualCoins);
-      if (error) console.error('Coin update error:', error);
+      if (this.puzzleHash && await isCampaignPuzzleFirstCompletion(this.puzzleHash)) {
+        actualCoins = normalCoins;
+        await addCoins(actualCoins);
+        await markCampaignPuzzleCompleted(this.puzzleHash);
+      }
 
       const progress = await getCampaignProgress();
       let currentCompleted = (progress[this.levelId] || 0) + 1;
@@ -181,8 +193,9 @@ export class GamePlayScene extends Phaser.Scene {
         if (tierBonus > 0) {
           await addCoins(tierBonus);
         }
+
         this.campaignCompletedModal = new CampaignCompletedModal(this);
-        this.campaignCompletedModal.show(this.difficulty, tierBonus);
+        this.campaignCompletedModal.show(this.difficulty, tierBonus, this.levelId);
         return;
       }
     }
